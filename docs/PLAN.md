@@ -14,3 +14,8 @@
 ## Phase 3
 1. Full scale run (56 slideshows + 18 videos + 10 pins/day)
 2. Retry logic + reporting dashboard
+
+## Added trend intelligence tools
+- `backend/trends/scrape_trends.py`: multi-source trend headline extractor (JSON output)
+- `backend/trends/scrape_competitor_posts.py`: hook pattern miner from competitor text lines
+- `backend/scripts/run_trend_pack.sh`: one-command trend pack generation
