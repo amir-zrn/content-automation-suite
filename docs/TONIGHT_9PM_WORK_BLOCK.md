@@ -21,3 +21,9 @@
 
 ## 5) Quick decision gate
 - Approve phase-2 build: plugin text mapper + export automation
+
+## Added for tonight (new)
+- Add safety filters before CSV export:
+  - Medical-claim risk filter/rewriter
+  - Duplicate hook suppression (cross-account + recent history)
+  - Risk report output (`safety_report.json`)
