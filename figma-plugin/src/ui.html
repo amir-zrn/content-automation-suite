@@ -1,18 +1,118 @@
 <!doctype html>
 <html>
-  <body style="font-family: Inter, sans-serif; padding: 12px;">
-    <h3>Content AutoFactory</h3>
-    <p>v1 plugin scaffold ready.</p>
-    <button id="ping">Test Connection</button>
-    <pre id="out"></pre>
-    <script>
-      const out = document.getElementById('out');
-      document.getElementById('ping').onclick = () => parent.postMessage({ pluginMessage: { type: 'PING' } }, '*');
-      onmessage = (event) => {
-        const m = event.data.pluginMessage;
-        if (!m) return;
-        out.textContent = JSON.stringify(m, null, 2);
-      }
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; margin: 0; padding: 12px; background: #111; color: #f2f2f2; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+    h3 { margin: 0 0 8px; font-size: 14px; }
+    label { display:block; font-size:12px; margin-bottom: 6px; color: #bdbdbd; }
+    input, textarea, button { width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #333; background: #0f0f0f; color: #fff; }
+    input, textarea { padding: 8px; font-size: 12px; }
+    button { padding: 9px; font-size: 12px; cursor: pointer; background: #2b6cff; border: none; font-weight: 600; }
+    button.secondary { background: #2a2a2a; border: 1px solid #3a3a3a; }
+    .row { display:flex; gap: 8px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; white-space: pre-wrap; max-height: 170px; overflow:auto; }
+    .muted { color:#9d9d9d; font-size:11px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h3>Content AutoFactory Plugin</h3>
+    <div class="muted">Load CSV, select target post containers in Figma (left-to-right), then apply rows.</div>
+  </div>
+
+  <div class="card">
+    <label>CSV File</label>
+    <input id="csvFile" type="file" accept=".csv,text/csv" />
+    <div class="row" style="margin-top:8px;">
+      <button class="secondary" id="previewSelection">Preview Selection</button>
+      <button class="secondary" id="pingBtn">Ping</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Start row index (0-based)</label>
+    <input id="startIndex" type="number" min="0" value="0" />
+    <div class="row" style="margin-top:8px;">
+      <button id="applyBtn">Apply to Selected</button>
+      <button class="secondary" id="closeBtn">Close</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Status</label>
+    <div id="status" class="mono">No CSV loaded.</div>
+  </div>
+
+  <script>
+    let rows = [];
+
+    function parseCSV(text) {
+      const lines = text.replace(/\r/g, '').split('\n').filter(Boolean);
+      if (!lines.length) return [];
+
+      const parseLine = (line) => {
+        const out = [];
+        let cur = '';
+        let q = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (q && line[i+1] === '"') { cur += '"'; i++; }
+            else q = !q;
+          } else if (ch === ',' && !q) {
+            out.push(cur); cur = '';
+          } else cur += ch;
+        }
+        out.push(cur);
+        return out;
+      };
+
+      const headers = parseLine(lines[0]).map(h => h.trim());
+      return lines.slice(1).map((line) => {
+        const vals = parseLine(line);
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+        return obj;
+      });
+    }
+
+    function setStatus(obj) {
+      const el = document.getElementById('status');
+      el.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    }
+
+    document.getElementById('csvFile').addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const text = await f.text();
+      rows = parseCSV(text);
+      setStatus({ loaded_rows: rows.length, headers: Object.keys(rows[0] || {}) });
+    });
+
+    document.getElementById('pingBtn').onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'PING' } }, '*');
+    };
+
+    document.getElementById('previewSelection').onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'PREVIEW_SELECTION' } }, '*');
+    };
+
+    document.getElementById('applyBtn').onclick = () => {
+      const startIndex = Number(document.getElementById('startIndex').value || 0);
+      parent.postMessage({ pluginMessage: { type: 'APPLY_BATCH', rows, startIndex } }, '*');
+    };
+
+    document.getElementById('closeBtn').onclick = () => {
+      parent.postMessage({ pluginMessage: { type: 'CLOSE' } }, '*');
+    };
+
+    onmessage = (event) => {
+      const m = event.data.pluginMessage;
+      if (!m) return;
+      setStatus(m);
+    };
+  </script>
+</body>
 </html>
