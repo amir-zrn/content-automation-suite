@@ -14,7 +14,7 @@ buildDailyBatches({
   ttPerAccount: Number(process.env.TT_PER_ACCOUNT || 4),
   igPerAccount: Number(process.env.IG_PER_ACCOUNT || 4),
   trendSignalsPath: process.env.TREND_SIGNALS_JSON || path.join(root,'backend/out/trend_signals.json'),
-  trendHookRatio: Number(process.env.TREND_HOOK_RATIO || 0.25)
+  trendHookRatio: Number(process.env.TREND_HOOK_RATIO || 1.0)
 });
 
 console.log('Generated batches in', outDir);
