@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
+import { loadTrendHooks } from './trendHooks.js';
 
 type HookRow = {
   ID: string;
@@ -39,8 +40,12 @@ export function buildDailyBatches(opts:{
   outDir:string;
   ttPerAccount:number;
   igPerAccount:number;
+  trendSignalsPath?: string;
+  trendHookRatio?: number;
 }) {
   const hooks = readCsv<HookRow>(opts.hooksCsv);
+  const trendHooks = loadTrendHooks(opts.trendSignalsPath, 120);
+  const trendRatio = Math.max(0, Math.min(1, opts.trendHookRatio ?? 0.25));
   const accounts = readCsv<Account>(opts.accountsCsv).filter(a=>a.status==='active');
   const tiktok = accounts.filter(a=>a.platform==='tiktok');
   const ig = accounts.filter(a=>a.platform==='instagram');
@@ -52,10 +57,13 @@ export function buildDailyBatches(opts:{
   for (const acc of tiktok){
     for (let n=0;n<opts.ttPerAccount;n++){
       const h = pick(hooks,i++);
+      const useTrend = trendHooks.length > 0 && Math.random() < trendRatio;
+      const selectedHook = useTrend ? trendHooks[(i+n) % trendHooks.length] : h.Slide_1_Hook;
       ttRows.push({
         account: acc.account,
         post_id: `TT-${acc.account.replace(/[^a-zA-Z0-9]/g,'')}-${n+1}`,
         ...h,
+        Slide_1_Hook: selectedHook,
         caption: `${h.Slide_1_Hook}\n\n${h.Slide_5_CTA_Overlay}`,
         test_tag: `tt|${acc.account}|${h.ID}`
       });
@@ -65,13 +73,15 @@ export function buildDailyBatches(opts:{
   for (const acc of ig){
     for (let n=0;n<opts.igPerAccount;n++){
       const h = pick(hooks,i++);
-      const igv = toIgVariant(h);
+      const useTrend = trendHooks.length > 0 && Math.random() < trendRatio;
+      const selectedHook = useTrend ? trendHooks[(i+n) % trendHooks.length] : h.Slide_1_Hook;
+      const igv = toIgVariant({...h, Slide_1_Hook: selectedHook} as HookRow);
       igRows.push({
         account: acc.account,
         post_id: `IG-${acc.account.replace(/[^a-zA-Z0-9]/g,'')}-${n+1}`,
         hook_id: h.ID,
         ...igv,
-        caption: `${h.Slide_1_Hook} ${h.Slide_5_CTA_Overlay}`,
+        caption: `${selectedHook} ${h.Slide_5_CTA_Overlay}`,
         test_tag: `ig|${acc.account}|${h.ID}`
       });
     }
@@ -91,6 +101,8 @@ export function buildDailyBatches(opts:{
     tiktokAccounts:tiktok.length,
     igAccounts:ig.length,
     ttPosts:ttRows.length,
-    igPosts:igRows.length
+    igPosts:igRows.length,
+    trendHooksLoaded: trendHooks.length,
+    trendHookRatio: trendRatio
   },null,2));
 }
