@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <body style="font-family: Inter, sans-serif; padding: 12px;">
+    <h3>Content AutoFactory</h3>
+    <p>v1 plugin scaffold ready.</p>
+    <button id="ping">Test Connection</button>
+    <pre id="out"></pre>
+    <script>
+      const out = document.getElementById('out');
+      document.getElementById('ping').onclick = () => parent.postMessage({ pluginMessage: { type: 'PING' } }, '*');
+      onmessage = (event) => {
+        const m = event.data.pluginMessage;
+        if (!m) return;
+        out.textContent = JSON.stringify(m, null, 2);
+      }
+    </script>
+  </body>
+</html>
